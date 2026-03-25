@@ -1,13 +1,14 @@
 export type Anchor = { id: string; turn: string; instruction: string };
-export type Script = { id: string; anchors: Anchor[] };
+export type Script = { id: string; anchors: Anchor[]; validated: boolean };
 export type Scenario = {
 	id: string;
 	name: string;
 	description: string;
 	scripts: Script[];
 	open: boolean;
+	validated: boolean;
 };
-export type Area = { id: string; name: string; scenarios: Scenario[]; open: boolean };
+export type Area = { id: string; name: string; scenarios: Scenario[]; open: boolean; validated: boolean };
 
 export type GenParams = {
 	numScenarios: number;

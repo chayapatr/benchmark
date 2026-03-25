@@ -79,6 +79,10 @@
 	);
 
 	let isRunning = $derived(sRuns.some((r) => r.status === 'running'));
+
+	function toggleValidate() {
+		script.validated = !script.validated;
+	}
 </script>
 
 <!-- tab bar + run button -->
@@ -100,14 +104,24 @@
 		{/each}
 	</div>
 
-	<!-- inline run button -->
+	<!-- validate + run buttons -->
+	<div class="flex items-center gap-1.5 mr-1">
+	<button
+		onclick={toggleValidate}
+		class="flex items-center gap-1 rounded border px-2.5 py-1 text-xs transition
+		{script.validated
+			? 'border-emerald-200 text-emerald-600 hover:border-emerald-300 hover:text-emerald-700'
+			: 'border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'}"
+	>
+		{script.validated ? '✓ validated' : '○ validate'}
+	</button>
 	<button
 		onclick={() => {
 			onRunScript(script.id);
 			app.activeTab = 'runs';
 		}}
 		disabled={isRunning}
-		class="flex items-center gap-1.5 rounded border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-40 mr-1"
+		class="flex items-center gap-1.5 rounded border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-40"
 	>
 		{#if isRunning}
 			<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400"></span>
@@ -118,6 +132,7 @@
 			▶ run
 		{/if}
 	</button>
+	</div>
 </div>
 
 <div class="flex-1 overflow-y-auto px-5 py-4">

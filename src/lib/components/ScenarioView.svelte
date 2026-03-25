@@ -16,18 +16,33 @@
 		onSelectScript: (subId: string, areaId: string, scenarioId: string, scriptId: string) => void;
 		onRun: () => void;
 	} = $props();
+
+	function toggleValidate() {
+		scenario.validated = !scenario.validated;
+	}
 </script>
 
 <div class="flex flex-col h-full overflow-y-auto">
 	<!-- header with run button -->
 	<div class="flex items-center justify-between border-b border-zinc-200 px-5 py-3">
 		<div class="text-xs text-zinc-400">{areaName}</div>
-		<button
-			onclick={onRun}
-			class="flex items-center gap-1.5 rounded border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
-		>
-			▶ run all scripts
-		</button>
+		<div class="flex items-center gap-2">
+			<button
+				onclick={toggleValidate}
+				class="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs transition
+				{scenario.validated
+					? 'border-emerald-200 text-emerald-600 hover:border-emerald-300 hover:text-emerald-700'
+					: 'border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'}"
+			>
+				{scenario.validated ? '✓ validated' : '○ validate'}
+			</button>
+			<button
+				onclick={onRun}
+				class="flex items-center gap-1.5 rounded border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
+			>
+				▶ run all scripts
+			</button>
+		</div>
 	</div>
 
 	<div class="space-y-4 px-5 py-4">

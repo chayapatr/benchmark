@@ -46,13 +46,6 @@
 		return 'idle';
 	}
 
-	function scriptNum(subId: string, areaId: string, scenarioId: string, scriptId: string) {
-		const sub = submissions.find((s) => s.id === subId);
-		const area = sub?.areas.find((a) => a.id === areaId);
-		const scenario = area?.scenarios.find((s) => s.id === scenarioId);
-		return (scenario?.scripts.findIndex((s) => s.id === scriptId) ?? -1) + 1;
-	}
-
 	function subLabel(sub: Submission) {
 		if (!sub.text.trim()) return 'new submission';
 		return sub.text.slice(0, 40).trimEnd() + (sub.text.length > 40 ? '…' : '');
@@ -113,6 +106,7 @@
 						onkeydown={(e) => e.key === 'Enter' && (area.open = !area.open)}
 					>
 						<span class="w-4 shrink-0 text-xs text-zinc-400">{area.open ? '▾' : '▸'}</span>
+						<span class="mr-1 shrink-0 text-xs {area.validated ? 'text-emerald-500' : 'text-zinc-300'}">{area.validated ? '✓' : '○'}</span>
 						<span class="flex-1 truncate text-zinc-500 transition group-hover:text-zinc-700"
 							>{area.name}</span
 						>
@@ -141,9 +135,8 @@
 								tabindex="0"
 								onkeydown={(e) => e.key === 'Enter' && (scenario.open = !scenario.open)}
 							>
-								<span class="w-4 shrink-0 text-xs text-zinc-400"
-									>{scenario.open ? '▾' : '▸'}</span
-								>
+								<span class="w-4 shrink-0 text-xs text-zinc-400">{scenario.open ? '▾' : '▸'}</span>
+								<span class="mr-1 shrink-0 text-xs {scenario.validated ? 'text-emerald-500' : 'text-zinc-300'}">{scenario.validated ? '✓' : '○'}</span>
 								{#if app.renamingId === scenario.id}
 									<input
 										bind:value={scenario.name}
@@ -171,7 +164,7 @@
 											: 'text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700'}"
 										onclick={() => selectScript(sub.id, area.id, scenario.id, script.id)}
 									>
-										<span class="shrink-0 text-zinc-300">–</span>
+										<span class="shrink-0 text-xs {script.validated ? 'text-emerald-500' : 'text-zinc-300'}">{script.validated ? '✓' : '○'}</span>
 										<span class="flex-1 text-xs">script {idx + 1}</span>
 										{#if nRunning > 0}
 											<span class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400"

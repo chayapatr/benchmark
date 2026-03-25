@@ -214,7 +214,7 @@
 		const sc = getScenario(subId, areaId, scenarioId);
 		if (!sc) return;
 		const id = crypto.randomUUID();
-		sc.scripts.push({ id, anchors: [] });
+		sc.scripts.push({ id, anchors: [], validated: false });
 		app.selected = { kind: 'script', subId, areaId, scenarioId, scriptId: id };
 		app.activeTab = 'anchors';
 	}
@@ -223,7 +223,7 @@
 		const a = getArea(subId, areaId);
 		if (!a) return;
 		const id = crypto.randomUUID();
-		a.scenarios.push({ id, name: 'new scenario', description: '', scripts: [], open: true });
+		a.scenarios.push({ id, name: 'new scenario', description: '', scripts: [], open: true, validated: false });
 		app.selected = { kind: 'scenario', subId, areaId, scenarioId: id };
 		setTimeout(() => (app.renamingId = id), 40);
 	}

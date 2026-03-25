@@ -90,32 +90,39 @@
 
 	<!-- metrics -->
 	<div class="space-y-2">
-		<div class="text-xs text-zinc-400">metrics</div>
-		{#each sub.metrics as metric (metric.id)}
-			<div class="group flex items-start gap-2">
-				<div class="flex-1 space-y-1">
+		<div class="flex items-center justify-between">
+			<div class="text-xs text-zinc-400">metrics</div>
+			<button
+				onclick={() => sub.metrics.push({ id: crypto.randomUUID(), name: '', description: '' })}
+				class="text-xs text-zinc-400 transition hover:text-zinc-600">+ add</button
+			>
+		</div>
+		{#each sub.metrics as metric, i (metric.id)}
+			<div class="group rounded border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+				<div class="mb-1.5 flex items-center gap-2">
+					<span class="shrink-0 font-mono text-xs text-zinc-300">M{i + 1}</span>
 					<input
 						bind:value={metric.name}
 						placeholder="metric name"
-						class="w-full rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 placeholder:text-zinc-300 focus:border-zinc-500 focus:outline-none"
+						class="flex-1 bg-transparent text-xs font-medium text-zinc-700 placeholder:text-zinc-300 focus:outline-none"
 					/>
-					<input
-						bind:value={metric.description}
-						placeholder="what should the judge evaluate…"
-						class="w-full rounded border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-500 placeholder:text-zinc-300 focus:border-zinc-500 focus:outline-none"
-					/>
+					<button
+						onclick={() => (sub.metrics = sub.metrics.filter((m) => m.id !== metric.id))}
+						class="shrink-0 text-xs text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
+						>✕</button
+					>
 				</div>
-				<button
-					onclick={() => (sub.metrics = sub.metrics.filter((m) => m.id !== metric.id))}
-					class="mt-1 px-1 text-xs text-zinc-300 opacity-0 transition group-hover:opacity-100 hover:text-red-500"
-					>✕</button
-				>
+				<textarea
+					bind:value={metric.description}
+					placeholder="what should the judge evaluate…"
+					rows="2"
+					class="w-full resize-none bg-transparent text-xs leading-relaxed text-zinc-500 placeholder:text-zinc-300 focus:outline-none"
+				></textarea>
 			</div>
 		{/each}
-		<button
-			onclick={() => sub.metrics.push({ id: crypto.randomUUID(), name: '', description: '' })}
-			class="text-xs text-zinc-400 transition hover:text-zinc-600">+ metric</button
-		>
+		{#if sub.metrics.length === 0}
+			<div class="py-2 text-xs text-zinc-300">no metrics yet</div>
+		{/if}
 	</div>
 
 	{#if sub.generated}
