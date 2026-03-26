@@ -15,7 +15,10 @@ import type {
 
 export type { SseGenerateEvent, SseSimulateEvent, SseEvaluateEvent, GeneratedArea };
 
-export const API_BASE = 'http://localhost:3001';
+export const API_BASE =
+	typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+		? 'https://benchmark-production-2ae4.up.railway.app'
+		: 'http://localhost:3001';
 
 // ── Core SSE fetch helper ─────────────────────────────────────────────────────
 
