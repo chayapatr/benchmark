@@ -3,13 +3,25 @@
 
 	let {
 		sub,
-		generatorModels,
 		onGenerate
 	}: {
 		sub: Submission;
-		generatorModels: string[];
 		onGenerate: (sub: Submission) => void;
 	} = $props();
+
+	const PROVIDERS = ['openai', 'anthropic', 'deepinfra'] as const;
+
+	function splitId(id: string) {
+		const idx = id.indexOf(':');
+		if (idx === -1) return { provider: 'openai', model: id };
+		return { provider: id.slice(0, idx), model: id.slice(idx + 1) };
+	}
+
+	let genParts = $derived(splitId(sub.genParams.generatorModel));
+
+	function setGenModel(provider: string, model: string) {
+		sub.genParams.generatorModel = `${provider}:${model}`;
+	}
 </script>
 
 <div class="flex-1 space-y-5 overflow-y-auto px-5 py-4">
@@ -26,16 +38,23 @@
 	<div class="space-y-2">
 		<div class="text-xs text-zinc-400">generation</div>
 
-		<div class="flex items-center justify-between">
-			<span class="text-xs text-zinc-500">model</span>
-			<select
-				bind:value={sub.genParams.generatorModel}
-				class="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 focus:border-zinc-500 focus:outline-none"
-			>
-				{#each generatorModels as m (m)}
-					<option value={m}>{m}</option>
-				{/each}
-			</select>
+		<div class="flex items-center justify-between gap-2">
+			<span class="shrink-0 text-xs text-zinc-500">model</span>
+			<div class="flex min-w-0 flex-1 items-center gap-1">
+				<select
+					value={genParts.provider}
+					onchange={(e) => setGenModel((e.target as HTMLSelectElement).value, genParts.model)}
+					class="w-22 shrink-0 rounded border border-zinc-200 bg-white px-1 py-0.5 text-xs text-zinc-600 focus:outline-none"
+				>
+					{#each PROVIDERS as p (p)}<option value={p}>{p}</option>{/each}
+				</select>
+				<input
+					value={genParts.model}
+					onchange={(e) => setGenModel(genParts.provider, (e.target as HTMLInputElement).value)}
+					placeholder="model name"
+					class="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs text-zinc-700 placeholder-zinc-300 focus:outline-none"
+				/>
+			</div>
 		</div>
 
 		<div class="flex items-center justify-between">

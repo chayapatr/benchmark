@@ -1,10 +1,11 @@
-export type Anchor = { id: string; turn: string; instruction: string };
-export type Script = { id: string; anchors: Anchor[]; validated: boolean };
+export type { Anchor, Message, Metric, JudgeScore } from '@benchmark/types';
+// Re-export for convenience — no duplicate below
+
+export type Script = { id: string; anchors: import('@benchmark/types').Anchor[]; validated: boolean };
 export type Scenario = {
 	id: string;
 	name: string;
 	description: string;
-	/** Enriched fields populated by the generate phase (2026-test design) */
 	userPersona?: string;
 	userGoal?: string;
 	targetSystemPrompt?: string;
@@ -17,53 +18,46 @@ export type Area = { id: string; name: string; scenarios: Scenario[]; open: bool
 export type GenParams = {
 	numScenarios: number;
 	numScripts: number;
+	/** "provider:model" format e.g. "openai:gpt-4o" */
 	generatorModel: string;
 };
-
-export type Metric = { id: string; name: string; description: string };
 
 export type Submission = {
 	id: string;
 	text: string;
 	genParams: GenParams;
-	metrics: Metric[];
+	metrics: import('@benchmark/types').Metric[];
 	areas: Area[];
 	open: boolean;
 	generated: boolean;
 	generating: boolean;
 };
 
+/** Display-only model metadata, derived from the provider:model ID */
 export type Model = { id: string; name: string; provider: string };
 
 export type RunStatus = 'idle' | 'running' | 'done' | 'error';
-export type Message = { role: 'user' | 'assistant'; content: string };
-
-export type JudgeScore = {
-	score: number;
-	justification?: string;
-};
 
 export type Run = {
 	id: string;
-	/** Target model IDs that were tested — may be one or many */
+	/** "provider:model" format */
 	modelId: string;
 	scriptId: string;
 	round: number;
-	/** Version counter: each re-run increments this, old runs are kept */
 	version: number;
 	status: RunStatus;
 	progress: number;
-	messages: Message[];
+	messages: import('@benchmark/types').Message[];
 	/** scores[metricName][judgeModelId] = JudgeScore */
-	scores: Record<string, Record<string, JudgeScore>>;
+	scores: Record<string, Record<string, import('@benchmark/types').JudgeScore>>;
 	variance: Record<string, number>;
 };
 
-/** Simulation (conversation) parameters */
+/** Simulation parameters */
 export type SimParams = {
-	/** Multiple target models to test */
+	/** "provider:model" IDs to test */
 	testedModelIds: string[];
-	/** User/simulator model */
+	/** "provider:model" for the simulator */
 	simulatorModelId: string;
 	temperature: number;
 	maxTurns: number;
@@ -72,7 +66,7 @@ export type SimParams = {
 
 /** Evaluation parameters */
 export type EvalParams = {
-	/** Multiple judge models — each run is evaluated by all selected judges */
+	/** "provider:model" judge IDs */
 	judgeModelIds: string[];
 	numRounds: number;
 };
@@ -85,7 +79,6 @@ export type SelectedNode =
 
 export type ActiveTab = 'anchors' | 'runs' | 'eval';
 
-/** Mutable shared UI state passed by reference to child components */
 export type AppState = {
 	selected: SelectedNode;
 	activeTab: ActiveTab;

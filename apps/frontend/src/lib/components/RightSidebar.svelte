@@ -1,10 +1,7 @@
 <script lang="ts">
-	import type { AppState, Model, Run, RunStatus, Submission } from '$lib/types';
+	import type { AppState, Run, RunStatus, Submission } from '$lib/types';
 
 	let {
-		allModels,
-		judgeModelOptions,
-		userModelOptions,
 		submissions,
 		runs,
 		app,
@@ -12,9 +9,6 @@
 		onRunScenario,
 		onRunArea
 	}: {
-		allModels: Model[];
-		judgeModelOptions: string[];
-		userModelOptions: string[];
 		submissions: Submission[];
 		runs: Run[];
 		app: AppState;
@@ -23,6 +17,52 @@
 		onRunArea: (subId: string, areaId: string) => void;
 	} = $props();
 
+	const PROVIDERS = ['openai', 'anthropic', 'deepinfra'] as const;
+
+	// ── Add-model UI state ────────────────────────────────────────────────────
+	let addTestedProvider = $state<string>('openai');
+	let addTestedModel = $state('');
+	let addJudgeProvider = $state<string>('openai');
+	let addJudgeModel = $state('');
+
+	// ── Simulator split state ─────────────────────────────────────────────────
+	function splitId(id: string) {
+		const idx = id.indexOf(':');
+		if (idx === -1) return { provider: 'openai', model: id };
+		return { provider: id.slice(0, idx), model: id.slice(idx + 1) };
+	}
+
+	let simParts = $derived(splitId(app.simParams.simulatorModelId));
+
+	function setSimulator(provider: string, model: string) {
+		if (provider && model) app.simParams.simulatorModelId = `${provider}:${model}`;
+	}
+
+	// ── Tested models ─────────────────────────────────────────────────────────
+	function addTested() {
+		const id = `${addTestedProvider}:${addTestedModel.trim()}`;
+		if (!addTestedModel.trim() || app.simParams.testedModelIds.includes(id)) return;
+		app.simParams.testedModelIds = [...app.simParams.testedModelIds, id];
+		addTestedModel = '';
+	}
+
+	function removeTested(id: string) {
+		app.simParams.testedModelIds = app.simParams.testedModelIds.filter((m) => m !== id);
+	}
+
+	// ── Judge models ──────────────────────────────────────────────────────────
+	function addJudge() {
+		const id = `${addJudgeProvider}:${addJudgeModel.trim()}`;
+		if (!addJudgeModel.trim() || app.evalParams.judgeModelIds.includes(id)) return;
+		app.evalParams.judgeModelIds = [...app.evalParams.judgeModelIds, id];
+		addJudgeModel = '';
+	}
+
+	function removeJudge(id: string) {
+		app.evalParams.judgeModelIds = app.evalParams.judgeModelIds.filter((m) => m !== id);
+	}
+
+	// ── Run helpers ───────────────────────────────────────────────────────────
 	function allScriptIdsForArea(subId: string, areaId: string) {
 		return (
 			submissions
@@ -51,156 +91,152 @@
 		return (scenario?.scripts.findIndex((s) => s.id === scriptId) ?? -1) + 1;
 	}
 
-	function toggleTested(modelId: string) {
-		const ids = app.simParams.testedModelIds;
-		app.simParams.testedModelIds = ids.includes(modelId)
-			? ids.filter((id) => id !== modelId)
-			: [...ids, modelId];
-	}
+	const providerColor: Record<string, string> = {
+		openai: 'bg-emerald-100 text-emerald-700',
+		anthropic: 'bg-orange-100 text-orange-700',
+		deepinfra: 'bg-purple-100 text-purple-700',
+	};
 
-	function toggleJudge(model: string) {
-		const ids = app.evalParams.judgeModelIds;
-		app.evalParams.judgeModelIds = ids.includes(model)
-			? ids.filter((m) => m !== model)
-			: [...ids, model];
+	function providerBadge(provider: string) {
+		return providerColor[provider] ?? 'bg-zinc-100 text-zinc-600';
 	}
 </script>
 
-<div class="flex w-48 shrink-0 flex-col overflow-y-auto border-l border-zinc-200">
+<div class="flex w-52 shrink-0 flex-col overflow-y-auto border-l border-zinc-200 text-xs">
 
 	<!-- simulation params -->
-	<div class="border-b border-zinc-200 px-3 pt-3 pb-2">
-		<div class="mb-2 text-xs text-zinc-400">simulation</div>
+	<div class="border-b border-zinc-200 px-3 pt-3 pb-2 space-y-2">
+		<div class="text-zinc-400">simulation</div>
 
-		<!-- tested (multi-select) -->
-		<div class="mb-2">
-			<div class="mb-1 text-xs text-zinc-400">tested</div>
-			{#each allModels as model (model.id)}
-				<label class="flex cursor-pointer items-center gap-1.5 py-0.5">
-					<input
-						type="checkbox"
-						checked={app.simParams.testedModelIds.includes(model.id)}
-						onchange={() => toggleTested(model.id)}
-						class="shrink-0 accent-zinc-500"
-					/>
-					<span
-						class="truncate text-xs {app.simParams.testedModelIds.includes(model.id)
-							? 'text-zinc-700'
-							: 'text-zinc-400'}">{model.name}</span
-					>
-				</label>
+		<!-- tested models -->
+		<div>
+			<div class="mb-1 text-zinc-400">tested</div>
+			{#each app.simParams.testedModelIds as id (id)}
+				{@const p = splitId(id)}
+				<div class="flex items-center gap-1 py-0.5">
+					<span class="shrink-0 rounded px-1 py-px text-[10px] font-medium {providerBadge(p.provider)}">{p.provider.slice(0,4)}</span>
+					<span class="min-w-0 flex-1 truncate text-zinc-700">{p.model}</span>
+					<button onclick={() => removeTested(id)} class="shrink-0 text-zinc-300 hover:text-zinc-500">×</button>
+				</div>
 			{/each}
+			<!-- add row -->
+			<div class="mt-1 flex items-center gap-1">
+				<select
+					bind:value={addTestedProvider}
+					class="w-20 shrink-0 rounded border border-zinc-200 bg-white px-1 py-0.5 text-zinc-600 focus:outline-none"
+				>
+					{#each PROVIDERS as p (p)}<option value={p}>{p}</option>{/each}
+				</select>
+				<input
+					bind:value={addTestedModel}
+					onkeydown={(e) => e.key === 'Enter' && addTested()}
+					placeholder="model"
+					class="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-zinc-700 placeholder-zinc-300 focus:outline-none"
+				/>
+				<button
+					onclick={addTested}
+					class="shrink-0 rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-500 hover:border-zinc-400 hover:bg-zinc-50"
+				>+</button>
+			</div>
 		</div>
 
-		<!-- simulator (single select) -->
-		<div class="mb-2 flex items-center justify-between gap-2">
-			<span class="w-14 shrink-0 text-xs text-zinc-400">simulator</span>
-			<select
-				bind:value={app.simParams.simulatorModelId}
-				class="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs text-zinc-700 focus:outline-none"
-			>
-				{#each userModelOptions as m (m)}
-					<option value={m}>{m}</option>
-				{/each}
-			</select>
+		<!-- simulator -->
+		<div>
+			<div class="mb-1 text-zinc-400">simulator</div>
+			<div class="flex items-center gap-1">
+				<select
+					value={simParts.provider}
+					onchange={(e) => setSimulator((e.target as HTMLSelectElement).value, simParts.model)}
+					class="w-20 shrink-0 rounded border border-zinc-200 bg-white px-1 py-0.5 text-zinc-600 focus:outline-none"
+				>
+					{#each PROVIDERS as p (p)}<option value={p}>{p}</option>{/each}
+				</select>
+				<input
+					value={simParts.model}
+					onchange={(e) => setSimulator(simParts.provider, (e.target as HTMLInputElement).value)}
+					placeholder="model"
+					class="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-zinc-700 placeholder-zinc-300 focus:outline-none"
+				/>
+			</div>
 		</div>
 
 		<div class="flex items-center justify-between">
-			<span class="text-xs text-zinc-400">temp</span>
-			<input
-				type="number"
-				bind:value={app.simParams.temperature}
-				min="0"
-				max="2"
-				step="0.1"
-				class="w-14 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-right text-xs text-zinc-700 focus:outline-none"
-			/>
+			<span class="text-zinc-400">turns</span>
+			<input type="number" bind:value={app.simParams.maxTurns} min="1" max="30"
+				class="w-14 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-right text-zinc-700 focus:outline-none" />
 		</div>
-		<div class="mt-1 flex items-center justify-between">
-			<span class="text-xs text-zinc-400">turns</span>
-			<input
-				type="number"
-				bind:value={app.simParams.maxTurns}
-				min="1"
-				max="30"
-				class="w-14 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-right text-xs text-zinc-700 focus:outline-none"
-			/>
-		</div>
-		<div class="mt-1 flex items-center justify-between">
-			<span class="text-xs text-zinc-400">rounds</span>
+		<div class="flex items-center justify-between">
+			<span class="text-zinc-400">rounds</span>
 			<div class="flex items-center overflow-hidden rounded border border-zinc-200">
-				<button
-					onclick={() => (app.simParams.numRounds = Math.max(1, app.simParams.numRounds - 1))}
-					class="px-1.5 py-0.5 text-xs text-zinc-500 transition hover:bg-zinc-100">−</button
-				>
-				<span class="w-6 border-x border-zinc-200 py-0.5 text-center text-xs text-zinc-700"
-					>{app.simParams.numRounds}</span
-				>
-				<button
-					onclick={() => (app.simParams.numRounds = Math.min(10, app.simParams.numRounds + 1))}
-					class="px-1.5 py-0.5 text-xs text-zinc-500 transition hover:bg-zinc-100">+</button
-				>
+				<button onclick={() => (app.simParams.numRounds = Math.max(1, app.simParams.numRounds - 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">−</button>
+				<span class="w-6 border-x border-zinc-200 py-0.5 text-center text-zinc-700">{app.simParams.numRounds}</span>
+				<button onclick={() => (app.simParams.numRounds = Math.min(10, app.simParams.numRounds + 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">+</button>
 			</div>
 		</div>
 	</div>
 
 	<!-- evaluation params -->
-	<div class="border-b border-zinc-200 px-3 py-2">
-		<div class="mb-2 text-xs text-zinc-400">evaluation</div>
+	<div class="border-b border-zinc-200 px-3 py-2 space-y-2">
+		<div class="text-zinc-400">evaluation</div>
 
-		<!-- judge (multi-select) -->
-		<div class="mb-2">
-			<div class="mb-1 text-xs text-zinc-400">judge</div>
-			{#each judgeModelOptions as jm (jm)}
-				<label class="flex cursor-pointer items-center gap-1.5 py-0.5">
-					<input
-						type="checkbox"
-						checked={app.evalParams.judgeModelIds.includes(jm)}
-						onchange={() => toggleJudge(jm)}
-						class="shrink-0 accent-zinc-500"
-					/>
-					<span
-						class="truncate text-xs {app.evalParams.judgeModelIds.includes(jm)
-							? 'text-zinc-700'
-							: 'text-zinc-400'}">{jm}</span
-					>
-				</label>
+		<!-- judge models -->
+		<div>
+			<div class="mb-1 text-zinc-400">judge</div>
+			{#each app.evalParams.judgeModelIds as id (id)}
+				{@const p = splitId(id)}
+				<div class="flex items-center gap-1 py-0.5">
+					<span class="shrink-0 rounded px-1 py-px text-[10px] font-medium {providerBadge(p.provider)}">{p.provider.slice(0,4)}</span>
+					<span class="min-w-0 flex-1 truncate text-zinc-700">{p.model}</span>
+					<button onclick={() => removeJudge(id)} class="shrink-0 text-zinc-300 hover:text-zinc-500">×</button>
+				</div>
 			{/each}
+			<!-- add row -->
+			<div class="mt-1 flex items-center gap-1">
+				<select
+					bind:value={addJudgeProvider}
+					class="w-20 shrink-0 rounded border border-zinc-200 bg-white px-1 py-0.5 text-zinc-600 focus:outline-none"
+				>
+					{#each PROVIDERS as p (p)}<option value={p}>{p}</option>{/each}
+				</select>
+				<input
+					bind:value={addJudgeModel}
+					onkeydown={(e) => e.key === 'Enter' && addJudge()}
+					placeholder="model"
+					class="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-zinc-700 placeholder-zinc-300 focus:outline-none"
+				/>
+				<button
+					onclick={addJudge}
+					class="shrink-0 rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-500 hover:border-zinc-400 hover:bg-zinc-50"
+				>+</button>
+			</div>
 		</div>
 
 		<div class="flex items-center justify-between">
-			<span class="text-xs text-zinc-400">rounds</span>
+			<span class="text-zinc-400">rounds</span>
 			<div class="flex items-center overflow-hidden rounded border border-zinc-200">
-				<button
-					onclick={() => (app.evalParams.numRounds = Math.max(1, app.evalParams.numRounds - 1))}
-					class="px-1.5 py-0.5 text-xs text-zinc-500 transition hover:bg-zinc-100">−</button
-				>
-				<span class="w-6 border-x border-zinc-200 py-0.5 text-center text-xs text-zinc-700"
-					>{app.evalParams.numRounds}</span
-				>
-				<button
-					onclick={() => (app.evalParams.numRounds = Math.min(10, app.evalParams.numRounds + 1))}
-					class="px-1.5 py-0.5 text-xs text-zinc-500 transition hover:bg-zinc-100">+</button
-				>
+				<button onclick={() => (app.evalParams.numRounds = Math.max(1, app.evalParams.numRounds - 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">−</button>
+				<span class="w-6 border-x border-zinc-200 py-0.5 text-center text-zinc-700">{app.evalParams.numRounds}</span>
+				<button onclick={() => (app.evalParams.numRounds = Math.min(10, app.evalParams.numRounds + 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">+</button>
 			</div>
 		</div>
 	</div>
 
 	<!-- run buttons -->
 	<div class="space-y-1.5 px-3 py-3">
-		<div class="mb-2 text-xs text-zinc-400">run</div>
+		<div class="mb-2 text-zinc-400">run</div>
 
 		{#if app.selected.kind === 'script'}
 			{@const sel = app.selected}
 			{@const s = runsFor(sel.scriptId)}
 			{@const n = getScriptNum(sel.subId, sel.areaId, sel.scenarioId, sel.scriptId)}
 			<button
-				onclick={() => {
-					onRunScript(sel.scriptId);
-					app.activeTab = 'runs';
-				}}
+				onclick={() => { onRunScript(sel.scriptId); app.activeTab = 'runs'; }}
 				disabled={s.some((r) => r.status === 'running')}
-				class="flex w-full items-center justify-between rounded border border-zinc-300 px-2.5 py-1.5 text-xs text-zinc-600 transition hover:border-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
+				class="flex w-full items-center justify-between rounded border border-zinc-300 px-2.5 py-1.5 text-zinc-600 transition hover:border-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
 			>
 				<span>script {n}</span>
 				{#if s.some((r) => r.status === 'running')}
@@ -223,7 +259,7 @@
 			<button
 				onclick={() => onRunScenario(sel.subId, sel.areaId, sel.scenarioId)}
 				disabled={scStatus === 'running'}
-				class="flex w-full items-center justify-between rounded border border-zinc-200 px-2.5 py-1.5 text-xs text-zinc-500 transition hover:border-zinc-400 hover:bg-zinc-50 disabled:opacity-40"
+				class="flex w-full items-center justify-between rounded border border-zinc-200 px-2.5 py-1.5 text-zinc-500 transition hover:border-zinc-400 hover:bg-zinc-50 disabled:opacity-40"
 			>
 				<span class="truncate">{scenario?.name ?? 'scenario'}</span>
 				{#if scStatus === 'running'}
@@ -241,7 +277,7 @@
 				<button
 					onclick={() => onRunArea(sub.id, area.id)}
 					disabled={aStatus === 'running'}
-					class="flex w-full items-center justify-between rounded border border-zinc-200 px-2.5 py-1.5 text-xs text-zinc-400 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
+					class="flex w-full items-center justify-between rounded border border-zinc-200 px-2.5 py-1.5 text-zinc-400 transition hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
 				>
 					<span class="truncate">{area.name}</span>
 					{#if aStatus === 'running'}

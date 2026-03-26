@@ -1,22 +1,13 @@
 {
-  "availableModels": [
-    { "id": "gpt4o", "name": "GPT-4o", "provider": "OpenAI" },
-    { "id": "claude37", "name": "Claude 3.7", "provider": "Anthropic" },
-    { "id": "gemini2", "name": "Gemini 2.0", "provider": "Google" },
-    { "id": "llama4", "name": "Llama 4", "provider": "Meta" }
-  ],
-  "generatorModels": ["gpt-4o", "claude-3-5-sonnet", "gemini-2.0-flash"],
-  "judgeModels": ["gpt-4o", "claude-3-5-sonnet", "gemini-2.0-flash"],
-  "userModels": ["gpt-4o", "claude-3-5-sonnet", "gemini-2.0-flash"],
   "defaultSimParams": {
-    "testedModelIds": ["gpt4o", "claude37"],
-    "simulatorModelId": "gpt-4o",
+    "testedModelIds": ["openai:gpt-4o", "anthropic:claude-3-7-sonnet-20250219"],
+    "simulatorModelId": "openai:gpt-4o",
     "temperature": 0.8,
     "maxTurns": 12,
     "numRounds": 3
   },
   "defaultEvalParams": {
-    "judgeModelIds": ["gpt-4o"],
+    "judgeModelIds": ["openai:gpt-4o"],
     "numRounds": 3
   },
   "submissions": [
@@ -26,7 +17,7 @@
       "genParams": {
         "numScenarios": 3,
         "numScripts": 2,
-        "generatorModel": "gpt-4o"
+        "generatorModel": "openai:gpt-4o"
       },
       "metrics": [
         {

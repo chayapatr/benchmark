@@ -11,12 +11,14 @@
 	import rawData from '$lib/data.json';
 	import { streamGenerate, streamSimulate, streamEvaluate, type GeneratedArea } from '$lib/api';
 
-	// ── config (models, defaults) ─────────────────────────────────────────────────
+	// ── model helpers ─────────────────────────────────────────────────────────────
 
-	const ALL_MODELS = rawData.availableModels;
-	const GENERATOR_MODELS = rawData.generatorModels;
-	const JUDGE_MODELS = rawData.judgeModels;
-	const USER_MODELS = rawData.userModels;
+	function modelFromId(id: string) {
+		const idx = id.indexOf(':');
+		const provider = idx !== -1 ? id.slice(0, idx) : 'openai';
+		const name = idx !== -1 ? id.slice(idx + 1) : id;
+		return { id, name, provider };
+	}
 
 	// ── localStorage persistence helpers ──────────────────────────────────────────
 
@@ -106,9 +108,10 @@
 	);
 
 	let openChatRun = $derived(app.openChat ? runs.find((r) => r.id === app.openChat) ?? null : null);
-	let openChatModel = $derived(
-		openChatRun ? ALL_MODELS.find((m) => m.id === openChatRun!.modelId) : undefined
-	);
+	let openChatModel = $derived(openChatRun ? modelFromId(openChatRun.modelId) : undefined);
+
+	// allModels derived from current tested model IDs (used by ScriptView eval headers)
+	let allModels = $derived(app.simParams.testedModelIds.map(modelFromId));
 
 	// ── run management ────────────────────────────────────────────────────────────
 
@@ -395,7 +398,6 @@
 				{#if app.selected.kind === 'submission' && curSub}
 					<SubmissionView
 						sub={curSub}
-						generatorModels={GENERATOR_MODELS}
 						onGenerate={generateSubmission}
 					/>
 				{:else if app.selected.kind === 'script' && curScript && curSub}
@@ -408,7 +410,7 @@
 						scriptNum={curScriptNum}
 						{runs}
 						metrics={curSub.metrics}
-						allModels={ALL_MODELS}
+						{allModels}
 						{app}
 						onOpenChat={(id) => (app.openChat = id)}
 						onRunScript={(scriptId) => enqueueRuns([scriptId])}
@@ -455,9 +457,6 @@
 
 		<!-- right sidebar -->
 		<RightSidebar
-			allModels={ALL_MODELS}
-			judgeModelOptions={JUDGE_MODELS}
-			userModelOptions={USER_MODELS}
 			{submissions}
 			{runs}
 			{app}

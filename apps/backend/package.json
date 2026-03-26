@@ -7,6 +7,8 @@
     "start": "node --import tsx/esm src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@benchmark/types": "workspace:*",
     "@hono/node-server": "^1.14.0",
     "hono": "^4.7.0",
     "openai": "^4.80.0",
