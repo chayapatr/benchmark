@@ -14,7 +14,8 @@
 		"format": "prettier --write ."
 	},
 	"dependencies": {
-		"@benchmark/types": "workspace:*"
+		"@benchmark/types": "workspace:*",
+		"@sveltejs/adapter-cloudflare": "^7.2.8"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.3",
