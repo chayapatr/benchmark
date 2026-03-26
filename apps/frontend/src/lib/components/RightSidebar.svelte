@@ -19,6 +19,21 @@
 
 	const PROVIDERS = ['openai', 'anthropic', 'deepinfra'] as const;
 
+	// ── Active submission (for generation params) ─────────────────────────────
+	let activeSub = $derived(
+		submissions.find((s) => s.id === (app.selected as { subId?: string }).subId) ?? null
+	);
+
+	let genParts = $derived(
+		activeSub
+			? splitId(activeSub.genParams.generatorModel)
+			: { provider: 'openai', model: '' }
+	);
+
+	function setGenModel(provider: string, model: string) {
+		if (activeSub) activeSub.genParams.generatorModel = `${provider}:${model}`;
+	}
+
 	// ── Add-model UI state ────────────────────────────────────────────────────
 	let addTestedProvider = $state<string>('openai');
 	let addTestedModel = $state('');
@@ -104,17 +119,72 @@
 
 <div class="flex w-52 shrink-0 flex-col overflow-y-auto border-l border-zinc-200 text-xs">
 
+	<!-- generation params -->
+	{#if activeSub}
+	<div class="border-b border-zinc-200 px-3 pt-3 pb-2 space-y-2">
+		<div class="flex items-center gap-1.5">
+			<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-zinc-100 text-[9px] font-bold text-zinc-500">1</span>
+			<span class="text-xs font-semibold uppercase tracking-widest text-zinc-500">Generate</span>
+		</div>
+
+		<!-- generator model -->
+		<div>
+			<div class="mb-1 text-xs text-zinc-500">model</div>
+			<div class="flex items-center gap-1">
+				<select
+					value={genParts.provider}
+					onchange={(e) => setGenModel((e.target as HTMLSelectElement).value, genParts.model)}
+					class="w-20 shrink-0 rounded border border-zinc-200 bg-white px-1 py-0.5 text-zinc-600 focus:outline-none"
+				>
+					{#each PROVIDERS as p (p)}<option value={p}>{p}</option>{/each}
+				</select>
+				<input
+					value={genParts.model}
+					onchange={(e) => setGenModel(genParts.provider, (e.target as HTMLInputElement).value)}
+					placeholder="model"
+					class="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-zinc-700 placeholder-zinc-300 focus:outline-none"
+				/>
+			</div>
+		</div>
+
+		<div class="flex items-center justify-between">
+			<span class="text-xs text-zinc-500">scenarios</span>
+			<div class="flex items-center overflow-hidden rounded border border-zinc-200">
+				<button onclick={() => activeSub && (activeSub.genParams.numScenarios = Math.max(1, activeSub.genParams.numScenarios - 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">−</button>
+				<span class="w-6 border-x border-zinc-200 py-0.5 text-center text-zinc-700">{activeSub.genParams.numScenarios}</span>
+				<button onclick={() => activeSub && (activeSub.genParams.numScenarios = Math.min(10, activeSub.genParams.numScenarios + 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">+</button>
+			</div>
+		</div>
+
+		<div class="flex items-center justify-between">
+			<span class="text-xs text-zinc-500">scripts</span>
+			<div class="flex items-center overflow-hidden rounded border border-zinc-200">
+				<button onclick={() => activeSub && (activeSub.genParams.numScripts = Math.max(1, activeSub.genParams.numScripts - 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">−</button>
+				<span class="w-6 border-x border-zinc-200 py-0.5 text-center text-zinc-700">{activeSub.genParams.numScripts}</span>
+				<button onclick={() => activeSub && (activeSub.genParams.numScripts = Math.min(10, activeSub.genParams.numScripts + 1))}
+					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">+</button>
+			</div>
+		</div>
+	</div>
+	{/if}
+
 	<!-- simulation params -->
 	<div class="border-b border-zinc-200 px-3 pt-3 pb-2 space-y-2">
-		<div class="text-zinc-400">simulation</div>
+		<div class="flex items-center gap-1.5">
+			<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-zinc-100 text-[9px] font-bold text-zinc-500">2</span>
+			<span class="text-xs font-semibold uppercase tracking-widest text-zinc-500">Simulate</span>
+		</div>
 
 		<!-- tested models -->
 		<div>
-			<div class="mb-1 text-zinc-400">tested</div>
+			<div class="mb-1 text-xs text-zinc-500">tested</div>
 			{#each app.simParams.testedModelIds as id (id)}
 				{@const p = splitId(id)}
 				<div class="flex items-center gap-1 py-0.5">
-					<span class="shrink-0 rounded px-1 py-px text-[10px] font-medium {providerBadge(p.provider)}">{p.provider.slice(0,4)}</span>
+					<span class="shrink-0 rounded px-1 py-px text-[10px] font-medium {providerBadge(p.provider)}">{p.provider === "openai" ? "OAI" : p.provider === "anthropic" ? "ANT" : p.provider === "deepinfra" ? "DI" : p.provider.slice(0,5)}</span>
 					<span class="min-w-0 flex-1 truncate text-zinc-700">{p.model}</span>
 					<button onclick={() => removeTested(id)} class="shrink-0 text-zinc-300 hover:text-zinc-500">×</button>
 				</div>
@@ -136,13 +206,13 @@
 				<button
 					onclick={addTested}
 					class="shrink-0 rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-500 hover:border-zinc-400 hover:bg-zinc-50"
-				>+</button>
+				>Add</button>
 			</div>
 		</div>
 
 		<!-- simulator -->
 		<div>
-			<div class="mb-1 text-zinc-400">simulator</div>
+			<div class="mb-1 text-xs text-zinc-500">simulator</div>
 			<div class="flex items-center gap-1">
 				<select
 					value={simParts.provider}
@@ -161,12 +231,17 @@
 		</div>
 
 		<div class="flex items-center justify-between">
-			<span class="text-zinc-400">turns</span>
+			<span class="text-xs text-zinc-500">temp</span>
+			<input type="number" bind:value={app.simParams.temperature} min="0" max="2" step="0.1"
+				class="w-14 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-right text-zinc-700 focus:outline-none" />
+		</div>
+		<div class="flex items-center justify-between">
+			<span class="text-xs text-zinc-500">turns</span>
 			<input type="number" bind:value={app.simParams.maxTurns} min="1" max="30"
 				class="w-14 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-right text-zinc-700 focus:outline-none" />
 		</div>
 		<div class="flex items-center justify-between">
-			<span class="text-zinc-400">rounds</span>
+			<span class="text-xs text-zinc-500">rounds</span>
 			<div class="flex items-center overflow-hidden rounded border border-zinc-200">
 				<button onclick={() => (app.simParams.numRounds = Math.max(1, app.simParams.numRounds - 1))}
 					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">−</button>
@@ -179,15 +254,18 @@
 
 	<!-- evaluation params -->
 	<div class="border-b border-zinc-200 px-3 py-2 space-y-2">
-		<div class="text-zinc-400">evaluation</div>
+		<div class="flex items-center gap-1.5">
+			<span class="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-zinc-100 text-[9px] font-bold text-zinc-500">3</span>
+			<span class="text-xs font-semibold uppercase tracking-widest text-zinc-500">Evaluate</span>
+		</div>
 
 		<!-- judge models -->
 		<div>
-			<div class="mb-1 text-zinc-400">judge</div>
+			<div class="mb-1 text-xs text-zinc-500">judge</div>
 			{#each app.evalParams.judgeModelIds as id (id)}
 				{@const p = splitId(id)}
 				<div class="flex items-center gap-1 py-0.5">
-					<span class="shrink-0 rounded px-1 py-px text-[10px] font-medium {providerBadge(p.provider)}">{p.provider.slice(0,4)}</span>
+					<span class="shrink-0 rounded px-1 py-px text-[10px] font-medium {providerBadge(p.provider)}">{p.provider === "openai" ? "OAI" : p.provider === "anthropic" ? "ANT" : p.provider === "deepinfra" ? "DI" : p.provider.slice(0,5)}</span>
 					<span class="min-w-0 flex-1 truncate text-zinc-700">{p.model}</span>
 					<button onclick={() => removeJudge(id)} class="shrink-0 text-zinc-300 hover:text-zinc-500">×</button>
 				</div>
@@ -209,12 +287,12 @@
 				<button
 					onclick={addJudge}
 					class="shrink-0 rounded border border-zinc-200 px-1.5 py-0.5 text-zinc-500 hover:border-zinc-400 hover:bg-zinc-50"
-				>+</button>
+				>Add</button>
 			</div>
 		</div>
 
 		<div class="flex items-center justify-between">
-			<span class="text-zinc-400">rounds</span>
+			<span class="text-xs text-zinc-500">rounds</span>
 			<div class="flex items-center overflow-hidden rounded border border-zinc-200">
 				<button onclick={() => (app.evalParams.numRounds = Math.max(1, app.evalParams.numRounds - 1))}
 					class="px-1.5 py-0.5 text-zinc-500 hover:bg-zinc-100">−</button>
@@ -227,7 +305,7 @@
 
 	<!-- run buttons -->
 	<div class="space-y-1.5 px-3 py-3">
-		<div class="mb-2 text-zinc-400">run</div>
+		<div class="mb-2 text-xs font-semibold uppercase tracking-widest text-zinc-500">Run</div>
 
 		{#if app.selected.kind === 'script'}
 			{@const sel = app.selected}

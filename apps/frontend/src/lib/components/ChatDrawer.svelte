@@ -69,13 +69,14 @@
 	<!-- scores footer — compact single-line per metric -->
 	{#if run.status === 'done' && Object.keys(run.scores).length > 0}
 		<div class="shrink-0 border-t border-zinc-200 px-4 py-2">
+			<div class="mb-1.5 text-xs font-medium text-zinc-400">Eval scores</div>
 			<div class="space-y-0.5">
 				{#each Object.entries(run.scores) as [metricName, judgeScores] (metricName)}
 					{@const avg = avgScore(judgeScores)}
 					{@const variance = run.variance[metricName] ?? 0}
 					{@const firstJustification = Object.values(judgeScores)[0]?.justification}
 					<div class="group relative flex items-center gap-2 py-0.5">
-						<span class="min-w-0 flex-1 truncate text-xs text-zinc-400">{metricName}</span>
+						<span class="min-w-0 flex-1 truncate text-xs text-zinc-600">{metricName}</span>
 						<span class="shrink-0 font-semibold tabular-nums text-xs {scoreColor(avg, variance)}">{(avg * 100).toFixed(0)}%</span>
 						<!-- justification tooltip on hover -->
 						{#if firstJustification}

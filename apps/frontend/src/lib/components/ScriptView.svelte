@@ -86,7 +86,7 @@
 </script>
 
 <!-- tab bar + run button -->
-<div class="flex shrink-0 items-center justify-between border-b border-zinc-200 px-2">
+<div class="flex shrink-0 items-center justify-between border-b border-zinc-200 px-2 gap-2">
 	<div class="flex">
 		{#each TABS as tab (tab)}
 			<button
@@ -96,7 +96,7 @@
 					? 'border-zinc-500 text-zinc-800'
 					: 'border-transparent text-zinc-400 hover:text-zinc-600'}"
 			>
-				{tab}
+				{tab.charAt(0).toUpperCase() + tab.slice(1)}
 				{#if tab === 'runs' && sRuns.length > 0}
 					<span class="ml-1 text-zinc-300">{doneRuns.length}/{sRuns.length}</span>
 				{/if}
@@ -104,46 +104,51 @@
 		{/each}
 	</div>
 
-	<!-- validate + run buttons -->
-	<div class="flex items-center gap-1.5 mr-1">
-	<button
-		onclick={toggleValidate}
-		class="flex items-center gap-1 rounded border px-2.5 py-1 text-xs transition
-		{script.validated
-			? 'border-emerald-200 text-emerald-600 hover:border-emerald-300 hover:text-emerald-700'
-			: 'border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'}"
-	>
-		{script.validated ? '✓ validated' : '○ validate'}
-	</button>
-	<button
-		onclick={() => {
-			onRunScript(script.id);
-			app.activeTab = 'runs';
-		}}
-		disabled={isRunning}
-		class="flex items-center gap-1.5 rounded border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-40"
-	>
-		{#if isRunning}
-			<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400"></span>
-			running…
-		{:else if doneRuns.length > 0}
-			▶ re-run
-		{:else}
-			▶ run
+	<!-- validate status + run button -->
+	<div class="flex items-center gap-2 mr-1">
+		{#if script.validated}
+			<span class="text-xs text-emerald-600 font-medium">✓ reviewed</span>
 		{/if}
-	</button>
+		<button
+			onclick={() => { onRunScript(script.id); app.activeTab = 'runs'; }}
+			disabled={isRunning}
+			class="flex items-center gap-1.5 rounded px-3 py-1 text-xs font-medium transition disabled:opacity-50
+			{isRunning
+				? 'bg-amber-50 text-amber-600'
+				: doneRuns.length > 0
+					? 'border border-zinc-200 text-zinc-500 hover:border-zinc-400 hover:text-zinc-700'
+					: 'bg-zinc-800 text-white hover:bg-zinc-700'}"
+		>
+			{#if isRunning}
+				<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400"></span>
+				running…
+			{:else if doneRuns.length > 0}
+				▶ re-run
+			{:else}
+				▶ run
+			{/if}
+		</button>
 	</div>
 </div>
 
 <div class="flex-1 overflow-y-auto px-5 py-4">
 	{#if app.activeTab === 'anchors'}
-		<div class="mb-4 text-xs text-zinc-400">{areaName} / {scenarioName} / script {scriptNum}</div>
+		<div class="mb-4 flex items-center gap-1 text-xs">
+		<span class="text-zinc-400">{areaName}</span>
+		<span class="text-zinc-200">›</span>
+		<span class="text-zinc-400">{scenarioName}</span>
+		<span class="text-zinc-200">›</span>
+		<span class="font-medium text-zinc-500">script {scriptNum}</span>
+	</div>
 		<div class="space-y-1">
+			{#if script.anchors.length === 0}
+				<p class="mb-3 text-xs text-zinc-400">Add turn-by-turn instructions to guide the simulated user during the conversation.</p>
+			{/if}
 			{#each script.anchors as anchor, i (anchor.id)}
 				<div class="group flex items-start gap-3">
 					<span class="mt-2 w-4 shrink-0 text-right text-xs text-zinc-300">{i + 1}</span>
 					<div class="mt-1.5 flex shrink-0 items-center gap-2">
-						<span class="text-xs text-zinc-400">turn</span>
+						<span class="text-xs text-zinc-500">at turn</span>
 						<input
 							bind:value={anchor.turn}
 							placeholder="4–5"
@@ -170,9 +175,33 @@
 			</div>
 		</div>
 
+		<!-- review callout -->
+		<button
+			onclick={toggleValidate}
+			class="mt-6 w-full rounded-lg border px-4 py-3 text-left transition
+			{script.validated
+				? 'border-zinc-400 bg-zinc-50 hover:bg-zinc-100'
+				: 'border-dashed border-zinc-300 bg-white hover:border-zinc-400 hover:bg-zinc-50'}"
+		>
+			<div class="flex items-center gap-3">
+				<span class="text-xl leading-none {script.validated ? 'text-emerald-500' : 'text-zinc-300'}">{script.validated ? '✓' : '○'}</span>
+				<div>
+					<div class="text-sm font-semibold {script.validated ? 'text-zinc-800' : 'text-zinc-700'}">
+						{script.validated ? 'Anchor instructions approved' : 'Approve anchor instructions'}
+					</div>
+					<p class="mt-0.5 text-xs {script.validated ? 'text-zinc-500' : 'text-zinc-400'}">
+						{script.validated ? 'These turn instructions are confirmed correct.' : 'Confirm each turn instruction will guide the simulator to the intended behavior.'}
+					</p>
+				</div>
+			</div>
+		</button>
+
 	{:else if app.activeTab === 'runs'}
 		{#if sRuns.length === 0}
-			<div class="py-10 text-zinc-300">no runs yet — click ▶ run above or use the run panel →</div>
+			<div class="py-10 space-y-1">
+			<div class="text-sm font-medium text-zinc-500">No runs yet</div>
+			<div class="text-xs text-zinc-400">Click ▶ run above to simulate this script across the configured tested models.</div>
+		</div>
 		{:else}
 			<!-- version selector -->
 			{#if allVersions.length > 1}
@@ -244,7 +273,7 @@
 
 	{:else if app.activeTab === 'eval'}
 		{#if doneRuns.length === 0}
-			<div class="py-10 text-zinc-300">no completed runs yet</div>
+			<div class="py-10 text-xs text-zinc-400">No completed runs yet. Run the script first.</div>
 		{:else}
 			<!-- aggregate stats across all runs, per metric × model -->
 			<div class="space-y-6">

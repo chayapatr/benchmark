@@ -375,9 +375,9 @@
 	<!-- topbar -->
 	<div class="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-2">
 		<span class="font-semibold tracking-tight text-zinc-800">benchmark</span>
-		<span class="text-zinc-400">
-			{submissions.filter((s) => s.generated).length} submissions ·
-			{submissions.flatMap((s) => s.areas).length} areas
+		<span class="text-xs text-zinc-400">
+			{submissions.filter((s) => s.generated).length} submission{submissions.filter((s) => s.generated).length !== 1 ? 's' : '' } ·
+			{submissions.flatMap((s) => s.areas).length} area{submissions.flatMap((s) => s.areas).length !== 1 ? 's' : '' }
 		</span>
 	</div>
 

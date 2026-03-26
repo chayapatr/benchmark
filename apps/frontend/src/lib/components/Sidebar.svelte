@@ -72,17 +72,21 @@
 		{#each submissions as sub (sub.id)}
 			<!-- submission row -->
 			<div
-				class="group flex cursor-pointer items-center gap-1 px-2 py-1 transition hover:bg-zinc-50"
-				onclick={() => {
-					sub.open = !sub.open;
-					app.selected = { kind: 'submission', subId: sub.id };
-				}}
+				class="group flex cursor-pointer items-center gap-1 px-2 py-1 transition hover:bg-zinc-50
+				{app.selected.subId === sub.id ? 'bg-zinc-50' : ''}"
+				onclick={() => app.selected = { kind: 'submission', subId: sub.id }}
 				role="button"
 				tabindex="0"
-				onkeydown={(e) => e.key === 'Enter' && (sub.open = !sub.open)}
+				onkeydown={(e) => e.key === 'Enter' && (app.selected = { kind: 'submission', subId: sub.id })}
 			>
-				<span class="w-4 shrink-0 text-xs text-zinc-400">{sub.open ? '▾' : '▸'}</span>
-				<span class="flex-1 truncate text-zinc-600 transition group-hover:text-zinc-800"
+				<span
+					class="w-4 shrink-0 text-xs text-zinc-400 hover:text-zinc-600"
+					onclick={(e) => { e.stopPropagation(); sub.open = !sub.open; }}
+					role="button"
+					tabindex="0"
+					onkeydown={(e) => e.key === 'Enter' && (sub.open = !sub.open)}
+				>{sub.open ? '▾' : '▸'}</span>
+				<span class="flex-1 truncate text-sm font-medium text-zinc-700 transition group-hover:text-zinc-900"
 					>{subLabel(sub)}</span
 				>
 				{#if runStatusFor(allScriptIdsForSub(sub.id)) === 'running'}
@@ -96,18 +100,27 @@
 				{#each sub.areas as area (area.id)}
 					<!-- area row -->
 					<div
-						class="group flex cursor-pointer items-center px-2 py-1 pl-4 transition hover:bg-zinc-50"
-						onclick={() => {
-							area.open = !area.open;
-							app.selected = { kind: 'area', subId: sub.id, areaId: area.id };
-						}}
+						class="group flex cursor-pointer items-center px-2 py-1 pl-4 transition hover:bg-zinc-50
+						{app.selected.kind === 'area' && app.selected.subId === sub.id && app.selected.areaId === area.id
+							? 'bg-zinc-50'
+							: ''}"
+						onclick={() => app.selected = { kind: 'area', subId: sub.id, areaId: area.id }}
 						role="button"
 						tabindex="0"
-						onkeydown={(e) => e.key === 'Enter' && (area.open = !area.open)}
+						onkeydown={(e) => e.key === 'Enter' && (app.selected = { kind: 'area', subId: sub.id, areaId: area.id })}
 					>
-						<span class="w-4 shrink-0 text-xs text-zinc-400">{area.open ? '▾' : '▸'}</span>
+						<span
+							class="w-4 shrink-0 text-xs text-zinc-400 hover:text-zinc-600"
+							onclick={(e) => { e.stopPropagation(); area.open = !area.open; }}
+							role="button"
+							tabindex="0"
+							onkeydown={(e) => e.key === 'Enter' && (area.open = !area.open)}
+						>{area.open ? '▾' : '▸'}</span>
 						<span class="mr-1 shrink-0 text-xs {area.validated ? 'text-emerald-500' : 'text-zinc-300'}">{area.validated ? '✓' : '○'}</span>
-						<span class="flex-1 truncate text-zinc-500 transition group-hover:text-zinc-700"
+						<span class="flex-1 truncate transition group-hover:text-zinc-700
+						{app.selected.kind === 'area' && app.selected.subId === sub.id && app.selected.areaId === area.id
+							? 'text-zinc-700'
+							: 'text-zinc-500'}"
 							>{area.name}</span
 						>
 						{#if runStatusFor(allScriptIdsForArea(sub.id, area.id)) === 'running'}
@@ -121,21 +134,22 @@
 						{#each area.scenarios as scenario (scenario.id)}
 							<!-- scenario row -->
 							<div
-								class="group flex cursor-pointer items-center px-2 py-1 pl-7 transition hover:bg-zinc-50"
-								onclick={() => {
-									scenario.open = !scenario.open;
-									app.selected = {
-										kind: 'scenario',
-										subId: sub.id,
-										areaId: area.id,
-										scenarioId: scenario.id
-									};
-								}}
+								class="group flex cursor-pointer items-center px-2 py-1 pl-7 transition hover:bg-zinc-50
+								{app.selected.kind === 'scenario' && app.selected.scenarioId === scenario.id
+									? 'bg-zinc-50'
+									: ''}"
+								onclick={() => app.selected = { kind: 'scenario', subId: sub.id, areaId: area.id, scenarioId: scenario.id }}
 								role="button"
 								tabindex="0"
-								onkeydown={(e) => e.key === 'Enter' && (scenario.open = !scenario.open)}
+								onkeydown={(e) => e.key === 'Enter' && (app.selected = { kind: 'scenario', subId: sub.id, areaId: area.id, scenarioId: scenario.id })}
 							>
-								<span class="w-4 shrink-0 text-xs text-zinc-400">{scenario.open ? '▾' : '▸'}</span>
+								<span
+									class="w-4 shrink-0 text-xs text-zinc-400 hover:text-zinc-600"
+									onclick={(e) => { e.stopPropagation(); scenario.open = !scenario.open; }}
+									role="button"
+									tabindex="0"
+									onkeydown={(e) => e.key === 'Enter' && (scenario.open = !scenario.open)}
+								>{scenario.open ? '▾' : '▸'}</span>
 								<span class="mr-1 shrink-0 text-xs {scenario.validated ? 'text-emerald-500' : 'text-zinc-300'}">{scenario.validated ? '✓' : '○'}</span>
 								{#if app.renamingId === scenario.id}
 									<input
@@ -177,7 +191,7 @@
 								<div class="py-0.5 pl-11">
 									<button
 										onclick={() => onAddScript(sub.id, area.id, scenario.id)}
-										class="text-xs text-zinc-300 transition hover:text-zinc-500">+ script</button
+										class="text-xs font-medium text-zinc-400 transition hover:text-zinc-600">+ script</button
 									>
 								</div>
 							{/if}
@@ -185,7 +199,7 @@
 						<div class="py-0.5 pl-7">
 							<button
 								onclick={() => onAddScenario(sub.id, area.id)}
-								class="text-xs text-zinc-300 transition hover:text-zinc-500">+ scenario</button
+								class="text-xs font-medium text-zinc-400 transition hover:text-zinc-600">+ scenario</button
 							>
 						</div>
 					{/if}
@@ -194,7 +208,7 @@
 		{/each}
 
 		<div class="px-2 py-2">
-			<button onclick={onAddSubmission} class="text-xs text-zinc-300 transition hover:text-zinc-500"
+			<button onclick={onAddSubmission} class="text-xs font-medium text-zinc-400 transition hover:text-zinc-600"
 				>+ submission</button
 			>
 		</div>
