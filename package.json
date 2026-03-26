@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --parallel -r dev",
-    "dev:web": "pnpm --filter web dev",
+    "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend dev"
   }
 }
