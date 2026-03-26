@@ -206,34 +206,30 @@
 						<tr class="border-t border-zinc-100">
 							<td class="py-2 pr-6 text-xs text-zinc-400">#{round}</td>
 							{#each app.simParams.testedModelIds as mId (mId)}
-								{@const run = displayedRuns.find(
-									(r) => r.modelId === mId && r.round === round
-								)}
+								{@const run = displayedRuns.find((r) => r.modelId === mId && r.round === round)}
 								<td class="py-2 pr-6">
 									{#if !run || run.status === 'idle'}
 										<span class="text-zinc-300">—</span>
 									{:else if run.status === 'running'}
 										<div class="flex items-center gap-2">
 											<div class="relative h-px w-20 bg-zinc-200">
-												<div
-													class="absolute inset-y-0 left-0 bg-zinc-400 transition-all"
-													style="width:{run.progress}%"
-												></div>
+												<div class="absolute inset-y-0 left-0 bg-zinc-400 transition-all" style="width:{run.progress}%"></div>
 											</div>
 											<span class="text-xs text-zinc-400">{run.progress.toFixed(0)}%</span>
 										</div>
 									{:else if run.status === 'done'}
+										{@const turns = Math.floor(run.messages.length / 2)}
 										{@const firstMetric = metrics[0]?.name}
-										{@const score = firstMetric ? avgScore(run, firstMetric) : 0}
+										{@const score = firstMetric ? avgScore(run, firstMetric) : null}
 										{@const variance = firstMetric ? avgVariance(run, firstMetric) : 0}
 										<button
 											onclick={() => onOpenChat(run.id)}
-											class="group flex items-center gap-2 text-left transition hover:opacity-70"
+											class="group flex flex-col gap-0.5 text-left transition hover:opacity-70"
 										>
-											<span class="{scoreColor(score, variance)} text-xs tabular-nums">
-												{firstMetric ? (score * 100).toFixed(0) + '%' : '—'}
-											</span>
-											<span class="text-xs text-zinc-300 group-hover:text-zinc-500">view →</span>
+											<span class="text-xs text-zinc-400">{turns} turn{turns !== 1 ? 's' : ''} <span class="text-zinc-300 group-hover:text-zinc-500">view →</span></span>
+											{#if score !== null}
+												<span class="text-xs font-semibold tabular-nums {scoreColor(score, variance)}">{(score * 100).toFixed(0)}%</span>
+											{/if}
 										</button>
 									{:else}
 										<span class="text-xs text-red-500">error</span>
@@ -250,124 +246,67 @@
 		{#if doneRuns.length === 0}
 			<div class="py-10 text-zinc-300">no completed runs yet</div>
 		{:else}
-			{@const allRounds = [...new Set(displayedRuns.filter(r => r.status === 'done').map((r) => r.round))].sort((a, b) => a - b)}
-			{@const judgeIds = [...new Set(doneRuns.flatMap((r) => Object.values(r.scores).flatMap((s) => Object.keys(s))))]}
-
-			{#if judgeIds.length > 1}
-				<div class="mb-3">
-					<button
-						onclick={() => (showJudgeBreakdown = !showJudgeBreakdown)}
-						class="text-xs text-zinc-400 transition hover:text-zinc-600"
-					>
-						{showJudgeBreakdown ? 'hide' : 'show'} per-judge breakdown
-						<span class="ml-1 text-zinc-300">({judgeIds.length} judges)</span>
-					</button>
-				</div>
-			{/if}
-
-			<div class="space-y-8">
+			<!-- aggregate stats across all runs, per metric × model -->
+			<div class="space-y-6">
 				{#each metrics as metric (metric.id)}
+					{@const allModelRuns = app.simParams.testedModelIds.map(mId => {
+						const mRuns = doneRuns.filter(r => r.modelId === mId);
+						const scores = mRuns.map(r => avgScore(r, metric.name));
+						const mean = scores.length ? scores.reduce((a,b) => a+b, 0) / scores.length : null;
+						const spread = scores.length > 1 ? Math.max(...scores) - Math.min(...scores) : 0;
+						const passCount = scores.filter(s => s >= 0.5).length;
+						return { mId, mRuns, scores, mean, spread, passCount };
+					})}
 					<div>
-						<div class="mb-1 text-xs text-zinc-400">{metric.name}</div>
+						<div class="mb-0.5 text-xs font-medium text-zinc-600">{metric.name}</div>
 						<div class="mb-3 text-xs text-zinc-300">{metric.description}</div>
 
-						{#if showJudgeBreakdown && judgeIds.length > 1}
-							{#each judgeIds as judgeId (judgeId)}
-								<div class="mb-3">
-									<div class="mb-1 text-xs text-zinc-300 italic">judge: {judgeId}</div>
-									<table class="w-full">
-										<thead>
-											<tr>
-												<th class="w-14 pr-4 pb-1 text-left text-xs font-normal text-zinc-300">round</th>
-												{#each app.simParams.testedModelIds as mId (mId)}
-													<th class="pr-4 pb-1 text-left text-xs font-normal text-zinc-400">{allModels.find(x => x.id === mId)?.name ?? mId}</th>
-												{/each}
-											</tr>
-										</thead>
-										<tbody>
-											{#each allRounds as round (round)}
-												<tr class="border-t border-zinc-100">
-													<td class="py-1 pr-4 text-xs text-zinc-300">#{round}</td>
-													{#each app.simParams.testedModelIds as mId (mId)}
-														{@const run = displayedRuns.find((r) => r.modelId === mId && r.round === round && r.status === 'done')}
-														{@const js = run?.scores[metric.name]?.[judgeId]}
-														<td class="py-1 pr-4">
-															{#if js}
-																<span class="text-xs tabular-nums {scoreColor(js.score, 0)}">{(js.score * 100).toFixed(0)}%</span>
-															{:else}
-																<span class="text-xs text-zinc-300">—</span>
-															{/if}
-														</td>
-													{/each}
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-							{/each}
-						{/if}
-
-						<!-- averaged table -->
-						<table class="w-full">
-							<thead>
-								<tr>
-									<th class="w-14 pr-5 pb-2 text-left text-xs font-normal text-zinc-400">round</th>
-									{#each app.simParams.testedModelIds as mId (mId)}
-										{@const m = allModels.find((x) => x.id === mId)}
-										<th class="pr-5 pb-2 text-left text-xs font-normal text-zinc-500">{m?.name ?? mId}</th>
-									{/each}
-								</tr>
-							</thead>
-							<tbody>
-								{#each allRounds as round (round)}
-									<tr class="border-t border-zinc-100">
-										<td class="py-1.5 pr-5 text-xs text-zinc-400">#{round}</td>
-										{#each app.simParams.testedModelIds as mId (mId)}
-											{@const run = displayedRuns.find((r) => r.modelId === mId && r.round === round && r.status === 'done')}
-											<td class="py-1.5 pr-5">
-												{#if run}
-													{@const score = avgScore(run, metric.name)}
-													{@const variance = avgVariance(run, metric.name)}
-													<button
-														onclick={() => onOpenChat(run.id)}
-														class="group flex items-center gap-2 text-left transition hover:opacity-70"
-													>
-														<span class="text-xs tabular-nums {scoreColor(score, variance)}">{(score * 100).toFixed(0)}%</span>
-														<span class="text-xs text-zinc-300 group-hover:text-zinc-400">view →</span>
-													</button>
-												{:else}
-													<span class="text-xs text-zinc-300">—</span>
-												{/if}
-											</td>
-										{/each}
-									</tr>
-								{/each}
-								{#if allRounds.length > 1}
-									<tr class="border-t border-zinc-300">
-										<td class="py-1.5 pr-5 text-xs text-zinc-500">mean</td>
-										{#each app.simParams.testedModelIds as mId (mId)}
-											{@const mRuns = displayedRuns.filter((r) => r.modelId === mId && r.status === 'done')}
-											{#if mRuns.length > 0}
-												{@const scores = mRuns.map((r) => avgScore(r, metric.name))}
-												{@const mean = scores.reduce((a, b) => a + b, 0) / scores.length}
-												{@const spread = Math.max(...scores) - Math.min(...scores)}
-												<td class="py-1.5 pr-5">
-													<span class="text-xs font-semibold tabular-nums {scoreColor(mean, spread)}">{(mean * 100).toFixed(0)}%</span>
-													<span class="ml-1 text-xs text-zinc-400">±{((spread * 100) / 2).toFixed(0)}%</span>
-												</td>
-											{:else}
-												<td class="py-1.5 pr-5 text-xs text-zinc-300">—</td>
-											{/if}
-										{/each}
-									</tr>
+						<!-- model summary row -->
+						<div class="mb-4 flex gap-6">
+							{#each allModelRuns as { mId, mRuns, mean, spread, passCount } (mId)}
+								{#if mean !== null}
+									{@const m = allModels.find(x => x.id === mId)}
+									<div>
+										<div class="mb-0.5 text-xs text-zinc-400">{m?.name ?? mId}</div>
+										<div class="text-lg font-semibold tabular-nums leading-none {scoreColor(mean, spread)}">{(mean * 100).toFixed(0)}%</div>
+										<div class="mt-0.5 text-xs text-zinc-400">{passCount}/{mRuns.length} pass{spread > 0 ? ` · ±${((spread * 100)/2).toFixed(0)}%` : ''}</div>
+									</div>
 								{/if}
-							</tbody>
-						</table>
+							{/each}
+						</div>
+
+						<!-- per-round breakdown (collapsed by default if many rounds) -->
+						{#if doneRuns.length > 1}
+							<div class="space-y-1">
+								{#each doneRuns.sort((a,b) => a.round - b.round) as run (run.id)}
+									{@const score = avgScore(run, metric.name)}
+									{@const variance = avgVariance(run, metric.name)}
+									{@const justification = Object.values(run.scores[metric.name] ?? {})[0]?.justification}
+									{@const m = allModels.find(x => x.id === run.modelId)}
+									<div class="rounded border border-zinc-100 bg-zinc-50 px-3 py-2">
+										<div class="flex items-center gap-3">
+											<span class="text-xs text-zinc-400">#{run.round} {m?.name ?? run.modelId}</span>
+											<span class="text-xs font-semibold tabular-nums {scoreColor(score, variance)}">{score >= 0.5 ? 'pass' : 'fail'} · {(score * 100).toFixed(0)}%</span>
+										</div>
+										{#if justification}
+											<div class="mt-1 text-xs leading-relaxed text-zinc-400">{justification}</div>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{:else}
+							{@const run = doneRuns[0]}
+							{@const justification = Object.values(run.scores[metric.name] ?? {})[0]?.justification}
+							{#if justification}
+								<div class="text-xs leading-relaxed text-zinc-400">{justification}</div>
+							{/if}
+						{/if}
 					</div>
 				{/each}
-				{#if doneRuns.some((r) => Object.values(r.variance).some((v) => v > 0.08))}
+
+				{#if doneRuns.some(r => Object.values(r.variance).some(v => v > 0.08))}
 					<div class="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-						variance &gt;8% detected — consider more rounds
+						high variance detected — consider more rounds
 					</div>
 				{/if}
 			</div>

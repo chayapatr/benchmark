@@ -4,6 +4,10 @@ export type Scenario = {
 	id: string;
 	name: string;
 	description: string;
+	/** Enriched fields populated by the generate phase (2026-test design) */
+	userPersona?: string;
+	userGoal?: string;
+	targetSystemPrompt?: string;
 	scripts: Script[];
 	open: boolean;
 	validated: boolean;

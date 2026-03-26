@@ -84,7 +84,7 @@
 			></span>
 			generating…
 		{:else}
-			{sub.generated ? 're-generate' : 'generate'}
+			generate
 		{/if}
 	</button>
 

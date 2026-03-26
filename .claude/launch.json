@@ -5,6 +5,7 @@
       "name": "frontend",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
+      "cwd": "/Users/chayapatr/Craft/medialab/cyborglab/benchmark/web/.claude/worktrees/stoic-hypatia",
       "port": 5173
     },
     {
