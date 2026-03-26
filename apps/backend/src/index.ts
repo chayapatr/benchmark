@@ -7,7 +7,15 @@ import { runsRouter } from './routes/runs.js';
 
 const app = new Hono();
 
-app.use('*', cors({ origin: ['http://localhost:5173', 'http://localhost:4173'] }));
+app.use('*', cors({
+  origin: (origin) => {
+    if (!origin) return null;
+    if (origin.startsWith('http://localhost')) return origin;
+    if (origin.endsWith('.pages.dev')) return origin;
+    if (origin === process.env.FRONTEND_ORIGIN) return origin;
+    return null;
+  },
+}));
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
